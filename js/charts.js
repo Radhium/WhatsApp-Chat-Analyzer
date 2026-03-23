@@ -1,135 +1,233 @@
-let userChart = null;
-let hourChart = null;
-let dailyChart = null;
+// charts.js
+// Renders all Chart.js charts on dashboard.html.
+// Called by render.js after DOM is populated.
+// Depends on Chart.js being loaded via CDN in dashboard.html.
 
-function destroyCharts() {
-  if (userChart) userChart.destroy();
-  if (hourChart) hourChart.destroy();
-  if (dailyChart) dailyChart.destroy();
+// Colour ramp for messages-by-person bar chart (top 10 + others)
+const BLUES = [
+  "#1A73E8",
+  "#3D8EF0",
+  "#5A9CF0",
+  "#78ADF3",
+  "#93BBF5",
+  "#AACBF7",
+  "#B8D3F8",
+  "#C8DBFA",
+  "#D5E4FB",
+  "#DFEBFC",
+  "#E0E3E7", // "others" gets the neutral grey
+];
+
+const ACCENT = "#1A73E8";
+const GRID_CLR = "#E0E3E7";
+
+// Keep references so the resize handler can reach both charts
+let messagesChart = null;
+let activityChart = null;
+
+// ─── Entry point ─────────────────────────────────────────────────────────────
+
+export function renderCharts(data) {
+  applyChartDefaults();
+  messagesChart = renderMessagesChart(data);
+  activityChart = renderActivityChart(data);
+  attachResizeHandler();
 }
 
-function drawUserChart(ctx, data) {
-  destroyCharts();
+// ─── Global Chart.js defaults ────────────────────────────────────────────────
 
-  const sortedUsers = Object.entries(data)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 15);
+function applyChartDefaults() {
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.color = "#9AA0A6";
+}
 
-  userChart = new Chart(ctx, {
+// ─── Messages by person (horizontal bar) ─────────────────────────────────────
+
+function renderMessagesChart(data) {
+  const canvas = document.getElementById("messagesChart");
+  if (!canvas) return null;
+
+  const { userCounts, participants } = data;
+
+  const sorted = participants
+    .slice()
+    .sort((a, b) => (userCounts[b] ?? 0) - (userCounts[a] ?? 0));
+
+  const top10 = sorted.slice(0, 10);
+  const theRest = sorted.slice(10);
+
+  const labels = top10.map((n) => n);
+  const counts = top10.map((n) => userCounts[n] ?? 0);
+  const colors = top10.map((_, i) => BLUES[i] ?? BLUES[BLUES.length - 2]);
+
+  if (theRest.length > 0) {
+    const othersTotal = theRest.reduce(
+      (sum, n) => sum + (userCounts[n] ?? 0),
+      0,
+    );
+    labels.push(`${theRest.length} others`);
+    counts.push(othersTotal);
+    colors.push(BLUES[BLUES.length - 1]);
+  }
+
+  return new Chart(canvas, {
     type: "bar",
     data: {
-      labels: sortedUsers.map((u) => u[0]),
+      labels,
       datasets: [
         {
-          label: "Messages",
-          data: sortedUsers.map((u) => u[1]),
-          backgroundColor: "rgba(34, 197, 94, 0.8)",
-          borderColor: "rgba(34, 197, 94, 1)",
-          borderWidth: 1,
-          borderRadius: 8,
+          data: counts,
+          backgroundColor: colors,
+          borderRadius: 4,
+          borderSkipped: false,
         },
       ],
     },
     options: {
+      indexAxis: "y",
       responsive: true,
-      maintainAspectRatio: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ` ${ctx.parsed.x.toLocaleString()} messages`,
+          },
+        },
       },
       scales: {
-        y: { beginAtZero: true },
+        x: {
+          grid: { color: GRID_CLR },
+          border: { color: GRID_CLR },
+          ticks: { font: { size: 11 } },
+        },
+        y: {
+          grid: { display: false },
+          border: { display: false },
+          ticks: {
+            font: { size: 12, weight: "500" },
+            color: "#444950",
+          },
+        },
       },
     },
   });
 }
 
-function drawHourChart(ctx, data) {
-  const sortedHours = Object.entries(data).sort(
-    (a, b) => parseInt(a[0]) - parseInt(b[0]),
+// ─── Activity by hour (area line chart) ──────────────────────────────────────
+
+function renderActivityChart(data) {
+  const canvas = document.getElementById("activityChart");
+  if (!canvas) return null;
+
+  const { hourCounts } = data;
+
+  // Fill all 24 hours, defaulting to 0 for any hour with no messages
+  const counts = Array.from(
+    { length: 24 },
+    (_, h) => hourCounts[String(h)] ?? 0,
   );
 
-  hourChart = new Chart(ctx, {
+  const labels = Array.from({ length: 24 }, (_, h) => {
+    if (h === 0) return "12 am";
+    if (h < 12) return `${h} am`;
+    if (h === 12) return "12 pm";
+    return `${h - 12} pm`;
+  });
+
+  // Build a descriptive insight line below the chart
+  updateActivityInsight(hourCounts);
+
+  return new Chart(canvas, {
     type: "line",
     data: {
-      labels: sortedHours.map((h) => h[0] + ":00"),
+      labels,
       datasets: [
         {
-          label: "Messages",
-          data: sortedHours.map((h) => h[1]),
-          borderColor: "rgba(59, 130, 246, 1)",
-          backgroundColor: "rgba(59, 130, 246, 0.1)",
-          tension: 0.4,
+          data: counts,
+          borderColor: ACCENT,
+          backgroundColor: "rgba(26,115,232,0.08)",
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHoverBackgroundColor: ACCENT,
           fill: true,
-          pointBackgroundColor: "rgba(59, 130, 246, 1)",
-          pointBorderColor: "#fff",
-          pointBorderWidth: 2,
-          pointRadius: 5,
+          tension: 0.4,
         },
       ],
     },
     options: {
       responsive: true,
-      maintainAspectRatio: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-      },
-      scales: {
-        y: { beginAtZero: true },
-      },
-    },
-  });
-}
-
-function drawDailyChart(ctx, data) {
-  // Sort days properly by parsing the date format correctly
-  const sortedDays = Object.entries(data).sort((a, b) => {
-    // Parse dates in M/D/YYYY format
-    const [aMonth, aDay, aYear] = a[0].split("/");
-    const [bMonth, bDay, bYear] = b[0].split("/");
-
-    const dateA = new Date(aYear, aMonth - 1, aDay);
-    const dateB = new Date(bYear, bMonth - 1, bDay);
-
-    return dateA - dateB;
-  });
-
-  // Limit to last 60 days for readability
-  const recentDays = sortedDays.slice(-60);
-
-  dailyChart = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: recentDays.map((d) => {
-        // Parse the date correctly from M/D/YYYY format
-        const [month, day, year] = d[0].split("/");
-        return month + "/" + day;
-      }),
-      datasets: [
-        {
-          label: "Daily Messages",
-          data: recentDays.map((d) => d[1]),
-          borderColor: "rgba(147, 51, 234, 1)",
-          backgroundColor: "rgba(147, 51, 234, 0.1)",
-          tension: 0.4,
-          fill: true,
-          pointBackgroundColor: "rgba(147, 51, 234, 1)",
-          pointBorderColor: "#fff",
-          pointBorderWidth: 2,
-          pointRadius: 4,
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ` ${ctx.parsed.y} messages`,
+          },
         },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: {
-        legend: { display: false },
       },
       scales: {
-        y: { beginAtZero: true },
+        x: {
+          grid: { display: false },
+          border: { color: GRID_CLR },
+          ticks: {
+            font: { size: 11 },
+            maxRotation: 0,
+            maxTicksLimit: window.innerWidth < 768 ? 5 : 8,
+          },
+        },
+        y: {
+          grid: { color: GRID_CLR },
+          border: { display: false },
+          ticks: { font: { size: 11 } },
+        },
       },
     },
   });
 }
 
-export { drawUserChart, drawHourChart, drawDailyChart };
+// Writes a human-readable insight line under the activity chart
+function updateActivityInsight(hourCounts) {
+  const insightEl = document
+    .querySelector("#activityChart")
+    ?.closest(".card")
+    ?.querySelector('p[style*="font-size: 13px"]');
+
+  if (!insightEl) return;
+
+  const sorted = Object.entries(hourCounts)
+    .map(([h, c]) => ({ h: parseInt(h, 10), c }))
+    .sort((a, b) => b.c - a.c);
+
+  if (!sorted.length) {
+    insightEl.innerHTML = "";
+    return;
+  }
+
+  const peakHour = sorted[0].h;
+  const quietHour = sorted[sorted.length - 1].h;
+
+  insightEl.innerHTML = `
+    Peak activity at <strong style="color: var(--text-secondary)">${formatHour(peakHour)}.</strong>
+    Quietest around <strong style="color: var(--text-secondary)">${formatHour(quietHour)}.</strong>
+  `;
+}
+
+// ─── Resize handler ───────────────────────────────────────────────────────────
+
+function attachResizeHandler() {
+  window.addEventListener("resize", () => {
+    messagesChart?.resize();
+    activityChart?.resize();
+  });
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatHour(h) {
+  if (h === 0) return "12 am";
+  if (h < 12) return `${h} am`;
+  if (h === 12) return "12 pm";
+  return `${h - 12} pm`;
+}

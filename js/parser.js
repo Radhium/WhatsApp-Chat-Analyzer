@@ -1,250 +1,145 @@
-function parseChat(text) {
-  const lines = text.split("\n");
+// parser.js
+// Reads raw WhatsApp .txt export and returns structured message data.
+// Handles the DD/MM/YYYY, HH:MM - Sender: text format (Android/iOS 24h exports).
 
-  const users = {};
-  const hours = {};
-  const days = {};
-  let firstDate = null;
-  let lastDate = null;
-  let total = 0;
-
-  // System messages to ignore (voice calls, video calls, group events, etc.)
-  const systemMessages = [
-    "missed voice call",
-    "missed video call",
-    "voice call",
-    "video call",
-    "call ended",
-    "you missed",
-    "messages and calls are encrypted",
-    "this message was deleted",
-    "media omitted",
-    "image omitted",
-    "video omitted",
-    "audio omitted",
-    "sticker omitted",
-    "document omitted",
-    "contact card omitted",
-    "location omitted",
-    "poll ended",
-    "changed the subject",
-    "changed the group description",
-    "changed the group icon",
-    "changed this group's icon",
-    "changed this group's subject",
-    "added",
-    "removed",
-    "left",
-    "joined",
-    "created group",
-    "group icon",
-    "security code changed",
-    "end-to-end encrypted",
-    "set the group description",
-    "deleted this message",
-    "deleted message",
-    "changed their phone number",
-    "invited",
-    "now an admin",
-    "is now an admin",
-    "changed the group settings",
-    "changed the group name",
-    "changed the group admin settings",
-    "changed the group invite settings",
-    "changed the group privacy settings",
-    "changed the group info",
-    "changed the group rules",
-    "changed the group photo",
-    "changed the group subject",
-    "changed the group description",
-    "changed the group",
-    "removed this message",
-    "this message was deleted",
-    "this message is no longer available",
-    "this message was removed",
-    "this message was not delivered",
-    "this message was not sent",
-    "this message was not delivered to all participants",
-    "this message was not delivered to some participants",
-    "this message was not delivered to one or more participants",
-    "this message was not delivered to the recipient",
-    "this message was not delivered to the group",
-    "this message was not delivered to the admin",
-    "this message was not delivered to the sender",
-    "this message was not delivered to the receiver",
-    "this message was not delivered to the user",
-    "this message was not delivered to the contact",
-    "this message was not delivered to the phone number",
-    "this message was not delivered to the device",
-    "this message was not delivered to the chat",
-    "this message was not delivered to the conversation",
-    "this message was not delivered to the participant",
-    "this message was not delivered to the group admin",
-    "this message was not delivered to the group member",
-    "this message was not delivered to the group participant",
-    "this message was not delivered to the group owner",
-    "this message was not delivered to the group creator",
-    "this message was not delivered to the group moderator",
-    "this message was not delivered to the group administrator",
-    "this message was not delivered to the group leader",
-    "this message was not delivered to the group manager",
-    "this message was not delivered to the group supervisor",
-    "this message was not delivered to the group coordinator",
-    "this message was not delivered to the group facilitator",
-    "this message was not delivered to the group organizer",
-    "this message was not delivered to the group representative",
-    "this message was not delivered to the group spokesperson",
-    "this message was not delivered to the group delegate",
-    "this message was not delivered to the group envoy",
-    "this message was not delivered to the group agent",
-    "this message was not delivered to the group proxy",
-    "this message was not delivered to the group deputy",
-    "this message was not delivered to the group substitute",
-    "this message was not delivered to the group alternate",
-    "this message was not delivered to the group stand-in",
-    "this message was not delivered to the group backup",
-    "this message was not delivered to the group reserve",
-    "this message was not delivered to the group replacement",
-    "this message was not delivered to the group fill-in",
-    "this message was not delivered to the group relief",
-    "this message was not delivered to the group support",
-    "this message was not delivered to the group assistant",
-    "this message was not delivered to the group helper",
-    "this message was not delivered to the group aide",
-    "this message was not delivered to the group associate",
-    "this message was not delivered to the group collaborator",
-    "this message was not delivered to the group partner",
-    "this message was not delivered to the group ally",
-    "this message was not delivered to the group companion",
-    "this message was not delivered to the group friend",
-    "this message was not delivered to the group peer",
-    "this message was not delivered to the group colleague",
-    "this message was not delivered to the group mate",
-    "this message was not delivered to the group buddy",
-    "this message was not delivered to the group pal",
-    "this message was not delivered to the group chum",
-    "this message was not delivered to the group comrade",
-    "this message was not delivered to the group partner-in-crime",
-    "this message was not delivered to the group sidekick",
-    "this message was not delivered to the group confidant",
-    "this message was not delivered to the group acquaintance",
-    "this message was not delivered to the group contact",
-    "this message was not delivered to the group connection",
-    "this message was not delivered to the group relation",
-    "this message was not delivered to the group relative",
-    "this message was not delivered to the group family",
-    "this message was not delivered to the group kin",
-    "this message was not delivered to the group kinsman",
-    "this message was not delivered to the group kinswoman",
-    "this message was not delivered to the group kinsfolk",
-    "this message was not delivered to the group kinspeople",
-    "this message was not delivered to the group kinsman",
-    "this message was not delivered to the group kinswoman",
-    "this message was not delivered to the group kinsfolk",
-    "this message was not delivered to the group kinspeople",
-    "this message was not delivered to the group kinsman",
-    "this message was not delivered to the group kinswoman",
-    "this message was not delivered to the group kinsfolk",
-    "this message was not delivered to the group kinspeople",
-    "this message was not delivered to the group kinsman",
-    "this message was not delivered to the group kinswoman",
-    "this message was not delivered to the group kinsfolk",
-    "this message was not delivered to the group kinspeople",
-    "this message was not delivered to the group kinsman",
-    "this message was not delivered to the group kinswoman",
-    "this message was not delivered to the group kinsfolk",
-    "this message was not delivered to the group kinspeople",
-    "this message was not delivered to the group kinsman",
-    "this message was not delivered to the group kinswoman",
-    "this message was not delivered to the group kinsfolk",
-    "this message was not delivered to the group kinspeople",
-    // Add more as needed
+// A system message has no sender — it's just "Date, Time - Some notice."
+// We detect this by checking if the line after the dash contains a colon (sender present)
+// vs. being a bare notice string. This replaces the old 100-item string array.
+function isSystemMessage(sender, content) {
+  // These are the only real patterns WhatsApp generates without a sender colon.
+  // If the regex somehow captures a sender, these guard against edge cases.
+  const systemPatterns = [
+    /^messages and calls are end-to-end encrypted/i,
+    /^missed (voice|video) call/i,
+    /^(voice|video) call/i,
+    /^<media omitted>$/i,
+    /security code (with|changed)/i,
+    /changed the (subject|group|icon|description|settings)/i,
+    /^(added|removed|left|joined|created group)/i,
+    /now an admin/i,
+    /invited.*to (the )?group/i,
+    /this message was deleted/i,
+    /deleted this message/i,
+    /your (security|safety) number/i,
+    /poll:/i,
+    /poll ended/i,
   ];
 
-  lines.forEach((line) => {
-    // More robust match for WhatsApp exported lines like:
-    // 12/31/2020, 9:05 PM - John Doe: Message text
-    const msgMatch = line.match(
-      /^\s*(\d{1,2}\/\d{1,2}\/\d{2,4}),\s+(\d{1,2}:\d{2}(?:\s?[APMapm\.]{2,4})?)\s*-\s*([^:]+):\s*/,
+  const text = content.trim().toLowerCase();
+  return systemPatterns.some((pattern) => pattern.test(text));
+}
+
+// Parses a single line into its components. Returns null if the line is not
+// a valid message line (continuation of previous message, blank line, etc.)
+function parseLine(line) {
+  // Format: DD/MM/YYYY, HH:MM - Sender: message content
+  // The sender name can contain spaces, emoji, and most unicode characters.
+  // We anchor on the timestamp pattern at the start.
+  const match = line.match(
+    /^(\d{1,2}\/\d{1,2}\/\d{2,4}),\s+(\d{1,2}:\d{2})\s+-\s+([^:]+):\s*([\s\S]*)$/,
+  );
+
+  if (!match) return null;
+
+  const [, dateStr, timeStr, sender, content] = match;
+  return { dateStr, timeStr, sender: sender.trim(), content: content.trim() };
+}
+
+// Converts DD/MM/YYYY into a JS Date object.
+// All dates in the sample export are D/M/Y (day-first).
+function parseDate(dateStr) {
+  const [day, month, year] = dateStr.split("/").map(Number);
+  const fullYear = year < 100 ? (year > 50 ? 1900 + year : 2000 + year) : year;
+  return new Date(fullYear, month - 1, day);
+}
+
+// Returns a sortable YYYY-MM-DD string from a Date object.
+// Used as a stable key for the daily activity map.
+function toDateKey(dateObj) {
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const d = String(dateObj.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+// Main export. Accepts the full string content of a WhatsApp .txt export.
+// Returns a structured result object ready for stats.js and render.js.
+function parseChat(rawText) {
+  const lines = rawText.split("\n");
+
+  // messageList stores every valid message as a structured object.
+  // This is what stats.js needs to compute response times and streaks.
+  const messageList = [];
+
+  // Aggregated counts — pre-built here so render.js doesn't re-iterate.
+  const userCounts = {}; // { "Tanmoy": 142, "Saptarishi": 98, ... }
+  const hourCounts = {}; // { "18": 34, "19": 71, ... }
+  const dayCounts = {}; // { "2024-02-07": 12, ... } — keyed YYYY-MM-DD
+
+  let firstDate = null;
+  let lastDate = null;
+
+  for (const line of lines) {
+    const parsed = parseLine(line);
+    if (!parsed) continue; // blank lines, multi-line continuations, non-message lines
+
+    const { dateStr, timeStr, sender, content } = parsed;
+
+    // Skip system-generated content. Media omitted counts as a real message
+    // (it happened, it's part of the conversation rhythm) — but filter it from
+    // response time analysis since it contributes no readable content.
+    const isMedia = /^<media omitted>$/i.test(content);
+    if (isSystemMessage(sender, content) && !sender) continue;
+
+    const dateObj = parseDate(dateStr);
+    const dateKey = toDateKey(dateObj);
+    const hour = timeStr.split(":")[0]; // "18", "09", etc.
+
+    // Build the full timestamp as a Date for response time calculation.
+    const [h, min] = timeStr.split(":").map(Number);
+    const timestamp = new Date(
+      dateObj.getFullYear(),
+      dateObj.getMonth(),
+      dateObj.getDate(),
+      h,
+      min,
     );
 
-    if (msgMatch) {
-      const dateStr = msgMatch[1];
-      const time = msgMatch[2];
-      const user = msgMatch[3].trim();
+    const message = {
+      timestamp,
+      dateKey,
+      sender,
+      content,
+      isMedia,
+    };
 
-      // Basic sanity checks for captured username
-      if (!user || /^\d+$/.test(user) || user.length < 2) {
-        return;
-      }
+    messageList.push(message);
 
-      // Reject captured usernames that are actually message content/URLs
-      if (/https?:\/\//i.test(user) || user.toLowerCase().includes("www.")) {
-        return;
-      }
+    // Update aggregates.
+    userCounts[sender] = (userCounts[sender] || 0) + 1;
+    hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+    dayCounts[dateKey] = (dayCounts[dateKey] || 0) + 1;
 
-      // Reject obviously malformed usernames that start or end with brackets/quotes
-      if (/^[\[\]\"']|[\[\]\"']$/.test(user)) {
-        return;
-      }
-
-      // Skip system messages (voice calls, video calls, etc.)
-      if (
-        systemMessages.some((msg) =>
-          user.toLowerCase().includes(msg.toLowerCase()),
-        )
-      ) {
-        return;
-      }
-
-      total++;
-
-      // Always treat as D/M/Y (Day/Month/Year)
-      const [day, month, year] = dateStr.split("/");
-      // Pad year if needed (e.g., 21 -> 2021)
-      let fullYear =
-        year.length === 2
-          ? parseInt(year) > 50
-            ? "19" + year
-            : "20" + year
-          : year;
-      const dateObj = new Date(
-        parseInt(fullYear),
-        parseInt(month) - 1,
-        parseInt(day),
-      );
-
-      // Track first and last dates
-      if (!firstDate || dateObj < firstDate) firstDate = dateObj;
-      if (!lastDate || dateObj > lastDate) lastDate = dateObj;
-
-      // Only count as a user if not a system message and not filtered above
-      users[user] = (users[user] || 0) + 1;
-
-      const hour = time.split(":")[0];
-      hours[hour] = (hours[hour] || 0) + 1;
-
-      days[dateStr] = (days[dateStr] || 0) + 1;
-    }
-  });
-
-  // Calculate chat duration in days
-  let chatDurationDays = 0;
-  if (firstDate && lastDate) {
-    chatDurationDays = Math.floor(
-      (lastDate - firstDate) / (1000 * 60 * 60 * 24),
-    );
+    if (!firstDate || dateObj < firstDate) firstDate = dateObj;
+    if (!lastDate || dateObj > lastDate) lastDate = dateObj;
   }
 
+  const total = messageList.length;
+  const chatDurationDays =
+    firstDate && lastDate
+      ? Math.round((lastDate - firstDate) / (1000 * 60 * 60 * 24))
+      : 0;
+
   return {
-    users,
-    hours,
-    days,
+    messageList, // Full array — consumed by stats.js
+    userCounts, // Message totals per user
+    hourCounts, // Message totals per hour of day
+    dayCounts, // Message totals per calendar day (YYYY-MM-DD)
     total,
-    firstDate: firstDate ? firstDate.toLocaleDateString() : null,
-    lastDate: lastDate ? lastDate.toLocaleDateString() : null,
+    firstDate, // Date object
+    lastDate, // Date object
     chatDurationDays,
-    userCount: Object.keys(users).length,
+    participants: Object.keys(userCounts),
   };
 }
 

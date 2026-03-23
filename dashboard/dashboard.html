@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WhatsApp Chat Analyzer — Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../css/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <!-- ── Navbar ─────────────────────────────────────────────────────── -->
+    <nav class="navbar">
+      <div class="navbar-inner">
+        <a href="../index.html" class="navbar-logo">WA<span>.</span>Analyzer</a>
+        <a href="../index.html" class="btn-ghost">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+          Analyze another
+        </a>
+      </div>
+    </nav>
+
+    <!-- ── Summary bar ────────────────────────────────────────────────── -->
+    <div class="summary-bar">
+      <div class="summary-bar-inner">
+        <div class="summary-stat">
+          <span class="summary-label">Total messages</span>
+          <span class="summary-number">—</span>
+        </div>
+        <div class="summary-stat">
+          <span class="summary-label">Participants</span>
+          <span class="summary-number">—</span>
+          <!-- render.js appends a .summary-sub with names when count is 6 or fewer -->
+        </div>
+        <div class="summary-stat">
+          <span class="summary-label">Chat duration</span>
+          <span class="summary-number">—</span>
+          <span class="summary-sub">days</span>
+        </div>
+        <div class="summary-stat">
+          <span class="summary-label">Date range</span>
+          <span class="summary-number" style="font-size: 18px; margin-top: 3px"
+            >—</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Page body ──────────────────────────────────────────────────── -->
+    <div class="page-body">
+      <!-- Messages by person + Activity by hour -->
+      <div class="main-grid fade-up">
+        <!-- Messages by person -->
+        <div class="card">
+          <h2 class="card-title">
+            Messages by person
+            <span class="card-title-meta"></span>
+          </h2>
+          <div class="chart-wrap">
+            <canvas id="messagesChart"></canvas>
+          </div>
+          <table class="user-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th style="text-align: right">Messages</th>
+                <th class="td-bar-cell">Share</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- render.js populates this -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Activity by hour -->
+        <div class="card">
+          <h2 class="card-title">Activity by hour</h2>
+          <div class="chart-wrap-sm">
+            <canvas id="activityChart"></canvas>
+          </div>
+          <p
+            style="font-size: 13px; color: var(--text-muted); line-height: 1.5"
+          >
+            <!-- charts.js writes the peak/quiet hour insight here -->
+          </p>
+        </div>
+      </div>
+
+      <!-- Response time -->
+      <div class="fade-up">
+        <p class="section-label">Response time</p>
+        <div class="card" style="padding: 0; overflow: hidden">
+          <table class="user-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Avg response</th>
+                <th class="th-median">Median</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- render.js populates this -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Streaks & Silences -->
+      <div class="fade-up">
+        <p class="section-label">Streaks &amp; silences</p>
+        <div class="streaks-grid">
+          <div class="streak-card">
+            <p class="streak-label">Longest active streak</p>
+            <div>
+              <span class="streak-number">—</span
+              ><span class="streak-unit">days</span>
+            </div>
+            <p class="streak-sub"></p>
+          </div>
+          <div class="streak-card">
+            <p class="streak-label">Current streak</p>
+            <div>
+              <span class="streak-number">—</span
+              ><span class="streak-unit">days</span>
+            </div>
+            <p class="streak-sub"></p>
+          </div>
+          <div class="streak-card">
+            <p class="streak-label">Longest silence</p>
+            <div>
+              <span class="streak-number">—</span
+              ><span class="streak-unit">days</span>
+            </div>
+            <p class="streak-sub"></p>
+          </div>
+        </div>
+
+        <!-- Activity calendar -->
+        <div class="timeline-card">
+          <div class="timeline-header">
+            <h2 class="card-title" style="margin-bottom: 0">
+              Activity calendar
+            </h2>
+            <div class="timeline-legend">
+              <div class="legend-item">
+                <div class="legend-dot legend-silent"></div>
+                No messages
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot legend-active"></div>
+                Active
+              </div>
+            </div>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+          <div class="timeline-months">
+            <!-- render.js populates month labels dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Footer bar ─────────────────────────────────────────────────── -->
+    <div class="footer-bar">
+      <div class="footer-bar-inner">
+        <span class="footer-meta"></span>
+        <div class="footer-actions">
+          <button class="btn-ghost" id="exportBtn">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export report
+          </button>
+          <a href="../index.html" class="btn-primary">Analyze another</a>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import { initDashboard } from "../Js/render.js";
+      document.addEventListener("DOMContentLoaded", initDashboard);
+    </script>
+
+    <script type="module">
+      // Export Report — generates a .md file from sessionStorage data and triggers download.
+      // Runs independently of render.js. Reads chatData directly.
+
+      const MONTH_SHORT = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+
+      function formatMonthYear(isoString) {
+        const d = new Date(isoString);
+        return `${MONTH_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+      }
+
+      function formatDuration(ms) {
+        const totalMinutes = Math.round(ms / 60000);
+        if (totalMinutes < 1) return "< 1 min";
+        if (totalMinutes < 60) return `${totalMinutes} min`;
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        if (minutes === 0) return `${hours} hr${hours !== 1 ? "s" : ""}`;
+        return `${hours} hr ${minutes} min`;
+      }
+
+      function buildReport(data) {
+        const from = formatMonthYear(data.firstDate);
+        const to = formatMonthYear(data.lastDate);
+        const lines = [];
+
+        // Header
+        lines.push(`# WhatsApp Chat Report`);
+        lines.push(`**Date range:** ${from} – ${to}  `);
+        lines.push(`**Generated:** ${new Date().toLocaleDateString()}`);
+        lines.push(``);
+
+        // Summary
+        lines.push(`## Summary`);
+        lines.push(``);
+        lines.push(`| Stat | Value |`);
+        lines.push(`|---|---|`);
+        lines.push(`| Total messages | ${data.total.toLocaleString()} |`);
+        lines.push(`| Participants | ${data.participants.length} |`);
+        lines.push(`| Chat duration | ${data.chatDurationDays} days |`);
+        lines.push(`| Date range | ${from} – ${to} |`);
+        lines.push(``);
+
+        // Messages by person
+        lines.push(`## Messages by Person`);
+        lines.push(``);
+        lines.push(`| Name | Messages | Share |`);
+        lines.push(`|---|---|---|`);
+
+        const sorted = data.participants
+          .slice()
+          .sort(
+            (a, b) => (data.userCounts[b] ?? 0) - (data.userCounts[a] ?? 0),
+          );
+
+        sorted.forEach((name) => {
+          const count = data.userCounts[name] ?? 0;
+          const share =
+            data.total > 0 ? ((count / data.total) * 100).toFixed(1) : "0.0";
+          lines.push(`| ${name} | ${count.toLocaleString()} | ${share}% |`);
+        });
+        lines.push(``);
+
+        // Most active hour
+        const peakHour = Object.entries(data.hourCounts).sort(
+          (a, b) => b[1] - a[1],
+        )[0];
+        if (peakHour) {
+          const h = parseInt(peakHour[0], 10);
+          const label =
+            h === 0
+              ? "12 am"
+              : h < 12
+                ? `${h} am`
+                : h === 12
+                  ? "12 pm"
+                  : `${h - 12} pm`;
+          lines.push(`## Activity`);
+          lines.push(``);
+          lines.push(
+            `**Peak hour:** ${label} (${peakHour[1].toLocaleString()} messages)  `,
+          );
+          lines.push(`**Active days:** ${data.activeDays}  `);
+          lines.push(``);
+        }
+
+        // Response time
+        if (data.responseTimes && Object.keys(data.responseTimes).length > 0) {
+          lines.push(`## Response Times`);
+          lines.push(``);
+          lines.push(`| Name | Avg response | Median | Note |`);
+          lines.push(`|---|---|---|---|`);
+
+          const eligible = Object.entries(data.responseTimes)
+            .filter(([, rt]) => rt.sampleCount >= 50)
+            .sort(([, a], [, b]) => a.avgMs - b.avgMs);
+
+          eligible.forEach(([name, rt]) => {
+            const note =
+              name === data.fastest
+                ? "Fastest"
+                : name === data.slowest
+                  ? "Slowest"
+                  : "";
+            lines.push(
+              `| ${name} | ${rt.avgFormatted} | ${rt.medianFormatted} | ${note} |`,
+            );
+          });
+
+          const ineligibleCount = Object.entries(data.responseTimes).filter(
+            ([, rt]) => rt.sampleCount < 50,
+          ).length;
+          if (ineligibleCount > 0) {
+            lines.push(``);
+            lines.push(
+              `_${ineligibleCount} participant${ineligibleCount > 1 ? "s" : ""} not shown — fewer than 50 messages sent._`,
+            );
+          }
+          lines.push(``);
+        }
+
+        // Streaks
+        lines.push(`## Streaks & Silences`);
+        lines.push(``);
+        lines.push(`| Stat | Value |`);
+        lines.push(`|---|---|`);
+        lines.push(`| Longest active streak | ${data.longestStreak} days |`);
+        lines.push(`| Current streak | ${data.currentStreak} days |`);
+        lines.push(`| Longest silence | ${data.longestSilenceDays} days |`);
+        lines.push(``);
+
+        lines.push(`---`);
+        lines.push(`_Generated by [WA.Analyzer](https://github.com)_`);
+
+        return lines.join("\n");
+      }
+
+      function downloadMarkdown(content, filename) {
+        const blob = new Blob([content], {
+          type: "text/markdown;charset=utf-8",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      document.getElementById("exportBtn").addEventListener("click", () => {
+        const raw = sessionStorage.getItem("chatData");
+        if (!raw) return;
+
+        const data = JSON.parse(raw);
+        const report = buildReport(data);
+        downloadMarkdown(report, "whatsapp-chat-report.md");
+      });
+    </script>
+  </body>
+</html>

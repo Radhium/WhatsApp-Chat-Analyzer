@@ -1,267 +1,198 @@
+// app.js
+// Entry point for index.html.
+// Owns the drop zone interaction, file validation, parsing pipeline,
+// and sessionStorage handoff to dashboard.html.
+
 import { parseChat } from "./parser.js";
-import { saveAnalysis, loadAnalysis } from "./storage.js";
-import { drawUserChart, drawHourChart, drawDailyChart } from "./charts.js";
+import { computeStats } from "./stats.js";
 
-// DOM Elements
-const fileInput = document.getElementById("fileInput");
+// ─── DOM References ───────────────────────────────────────────────────────────
+
 const dropZone = document.getElementById("dropZone");
-const analytics = document.getElementById("analytics");
-const uploadSection = document.getElementById("uploadSection");
+const fileInput = document.getElementById("fileInput");
+const exportToggle = document.getElementById("exportToggle");
+const exportSteps = document.getElementById("exportSteps");
 
-const totalMessages = document.getElementById("totalMessages");
-const totalUsers = document.getElementById("totalUsers");
-const avgMessages = document.getElementById("avgMessages");
-const totalHours = document.getElementById("totalHours");
-const topUser = document.getElementById("topUser");
-const topUserDesc = document.getElementById("topUserDesc");
-const activeHour = document.getElementById("activeHour");
-const activeHourDesc = document.getElementById("activeHourDesc");
-const chatDuration = document.getElementById("chatDuration");
-const chatDurationDesc = document.getElementById("chatDurationDesc");
-const userStatsTable = document.getElementById("userStatsTable");
+// ─── Export Instructions Toggle ───────────────────────────────────────────────
 
-const userChartJs = document.getElementById("userChartJs");
-const hourChartJs = document.getElementById("hourChartJs");
-const dailyChartJs = document.getElementById("dailyChartJs");
-
-const uploadNewBtn = document.getElementById("uploadNewBtn");
-const clearBtn = document.getElementById("clearBtn");
-const exportBtn = document.getElementById("exportBtn");
-const toast = document.getElementById("toast");
-
-let currentAnalysis = null;
-
-// File handling
-function handleFile(file) {
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const result = parseChat(e.target.result);
-      if (result.total === 0) {
-        showToast("No messages found. Please check the file format.", "error");
-        return;
-      }
-      currentAnalysis = result;
-      render(result);
-      saveAnalysis(result);
-      showToast("Chat analyzed successfully!");
-    } catch (error) {
-      showToast("Error parsing file. Please check the format.", "error");
-      console.error(error);
-    }
-  };
-  reader.onerror = () => {
-    showToast("Error reading file.", "error");
-  };
-  reader.readAsText(file);
-}
-
-// File input events
-fileInput.addEventListener("change", (e) => {
-  handleFile(e.target.files[0]);
+exportToggle.addEventListener("click", () => {
+  const isOpen = exportSteps.classList.contains("open");
+  exportSteps.classList.toggle("open");
+  exportToggle.setAttribute("aria-expanded", String(!isOpen));
+  exportSteps.setAttribute("aria-hidden", String(isOpen));
 });
 
-// Drag and drop
+// ─── Drop Zone — Visual States ────────────────────────────────────────────────
+
 dropZone.addEventListener("dragover", (e) => {
   e.preventDefault();
-  dropZone.classList.add("border-green-500", "bg-green-50");
+  dropZone.classList.add("drag-over");
 });
 
-dropZone.addEventListener("dragleave", () => {
-  dropZone.classList.remove("border-green-500", "bg-green-50");
+["dragleave", "dragend"].forEach((evt) => {
+  dropZone.addEventListener(evt, () => dropZone.classList.remove("drag-over"));
 });
 
+// ─── File Entry Points ────────────────────────────────────────────────────────
+
+// Drop
 dropZone.addEventListener("drop", (e) => {
   e.preventDefault();
-  dropZone.classList.remove("border-green-500", "bg-green-50");
-  handleFile(e.dataTransfer.files[0]);
+  dropZone.classList.remove("drag-over");
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
 });
 
-// Render analytics
-function render(data) {
-  analytics.classList.remove("hidden");
-  uploadSection.classList.add("hidden");
-  clearBtn.classList.remove("hidden");
-  exportBtn.classList.remove("hidden");
-
-  // Validate data to prevent NaN
-  if (!data.total || !data.userCount || data.userCount === 0) {
-    showToast("No valid messages found in the chat.", "error");
-    analytics.classList.add("hidden");
-    uploadSection.classList.remove("hidden");
-    return;
-  }
-
-  // Update key stats
-  totalMessages.textContent = data.total.toLocaleString();
-  totalUsers.textContent = data.userCount;
-  avgMessages.textContent = Math.round(data.total / data.userCount);
-  totalHours.textContent = Object.keys(data.hours).length;
-
-  // Top user
-  const topEntries = Object.entries(data.users);
-  if (topEntries.length > 0) {
-    const top = topEntries.sort((a, b) => b[1] - a[1])[0];
-    topUser.textContent = top[0];
-    topUserDesc.textContent = `${top[1].toLocaleString()} messages (${((top[1] / data.total) * 100).toFixed(1)}%)`;
-  } else {
-    topUser.textContent = "-";
-    topUserDesc.textContent = "No users found";
-  }
-
-  // Active hour
-  const hourEntries = Object.entries(data.hours);
-  if (hourEntries.length > 0) {
-    const hour = hourEntries.sort((a, b) => b[1] - a[1])[0];
-    const paddedHour = String(hour[0]).padStart(2, "0");
-    activeHour.textContent = `${paddedHour}:00`;
-    activeHourDesc.textContent = `${hour[1].toLocaleString()} messages at this hour`;
-  } else {
-    activeHour.textContent = "-";
-    activeHourDesc.textContent = "No hourly data available";
-  }
-
-  // Chat duration - with validation
-  if (
-    data.firstDate &&
-    data.lastDate &&
-    data.firstDate !== "Invalid Date" &&
-    data.lastDate !== "Invalid Date"
-  ) {
-    chatDuration.textContent = data.chatDurationDays.toLocaleString();
-    chatDurationDesc.textContent = data.firstDate + " to " + data.lastDate;
-  } else {
-    chatDuration.textContent = "-";
-    chatDurationDesc.textContent = "Date information unavailable";
-  }
-
-  // Build user stats table
-  const sortedUsers = Object.entries(data.users).sort((a, b) => b[1] - a[1]);
-  
-  // Debug: Log all users found
-  console.log("Users found:", sortedUsers);
-  
-  userStatsTable.innerHTML = sortedUsers
-    .map(([user, count]) => {
-      const percentage = ((count / data.total) * 100).toFixed(1);
-      return `
-        <tr class="hover:bg-gray-50 transition">
-          <td class="px-6 py-4 text-sm font-medium text-gray-900">${user}</td>
-          <td class="px-6 py-4 text-sm text-gray-600">${count.toLocaleString()}</td>
-          <td class="px-6 py-4 text-sm text-gray-600">${percentage}%</td>
-          <td class="px-6 py-4">
-            <div class="w-full bg-gray-200 rounded-full h-2">
-              <div class="bg-green-600 h-2 rounded-full" style="width: ${percentage}%"></div>
-            </div>
-          </td>
-        </tr>
-      `;
-    })
-    .join("");
-
-  // Draw charts
-  drawUserChart(userChartJs, data.users);
-  drawHourChart(hourChartJs, data.hours);
-  drawDailyChart(dailyChartJs, data.days);
-}
-
-// Show toast notification
-function showToast(message, type = "success") {
-  toast.textContent = message;
-  toast.classList.remove("hidden");
-  if (type === "error") {
-    toast.classList.add("bg-red-600");
-    toast.classList.remove("bg-green-600");
-  } else {
-    toast.classList.add("bg-green-600");
-    toast.classList.remove("bg-red-600");
-  }
-  setTimeout(() => {
-    toast.classList.add("hidden");
-  }, 3000);
-}
-
-// Upload new file
-uploadNewBtn.addEventListener("click", () => {
-  analytics.classList.add("hidden");
-  uploadSection.classList.remove("hidden");
-  clearBtn.classList.add("hidden");
-  exportBtn.classList.add("hidden");
-  currentAnalysis = null;
+// Click / file picker
+fileInput.addEventListener("change", () => {
+  const file = fileInput.files[0];
+  if (file) handleFile(file);
+  // Reset so the same file can be re-selected if needed after an error.
   fileInput.value = "";
 });
 
-// Clear data
-clearBtn.addEventListener("click", () => {
-  if (confirm("Are you sure you want to clear all data?")) {
-    localStorage.removeItem("lastChatAnalysis");
-    analytics.classList.add("hidden");
-    uploadSection.classList.remove("hidden");
-    clearBtn.classList.add("hidden");
-    exportBtn.classList.add("hidden");
-    currentAnalysis = null;
-    fileInput.value = "";
-    showToast("Data cleared successfully!");
+// ─── File Handling ────────────────────────────────────────────────────────────
+
+function handleFile(file) {
+  const validationError = validateFile(file);
+  if (validationError) {
+    showError(validationError);
+    return;
   }
-});
 
-// Export report
-exportBtn.addEventListener("click", () => {
-  if (!currentAnalysis) return;
+  clearError();
+  showLoading();
 
-  const data = currentAnalysis;
-  const report = `
-WhatsApp Chat Analysis Report
-========================================
-Generated: ${new Date().toLocaleString()}
+  const reader = new FileReader();
 
-SUMMARY STATISTICS
-- Total Messages: ${data.total.toLocaleString()}
-- Total Users: ${data.userCount}
-- Average Messages per User: ${Math.round(data.total / data.userCount)}
-- Chat Duration: ${data.chatDurationDays} days
-- Date Range: ${data.firstDate} to ${data.lastDate}
-- Active Hours: ${Object.keys(data.hours).length}
+  reader.onload = (e) => {
+    const rawText = e.target.result;
 
-TOP 10 MOST ACTIVE USERS
-${Object.entries(data.users)
-  .sort((a, b) => b[1] - a[1])
-  .slice(0, 10)
-  .map(
-    ([user, count], i) =>
-      `${i + 1}. ${user}: ${count.toLocaleString()} messages (${((count / data.total) * 100).toFixed(1)}%)`,
-  )
-  .join("\n")}
+    if (!rawText || rawText.trim().length === 0) {
+      hideLoading();
+      showError(
+        "This file appears to be empty. Export your chat again and try dropping the .txt file.",
+      );
+      return;
+    }
 
-HOURLY ACTIVITY DISTRIBUTION
-${Object.entries(data.hours)
-  .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-  .map(
-    ([hour, count]) =>
-      `${String(hour).padStart(2, "0")}:00 - ${count} messages`,
-  )
-  .join("\n")}
-  `;
+    const parsed = parseChat(rawText);
 
-  const element = document.createElement("a");
-  element.setAttribute(
-    "href",
-    "data:text/plain;charset=utf-8," + encodeURIComponent(report),
-  );
-  element.setAttribute("download", `whatsapp-analysis-${Date.now()}.txt`);
-  element.style.display = "none";
-  document.body.appendChild(element);
-  element.click();
-  document.body.removeChild(element);
+    if (parsed.total === 0) {
+      hideLoading();
+      showError(
+        "No messages found. Make sure you're uploading a WhatsApp .txt export, not another type of file.",
+      );
+      return;
+    }
 
-  showToast("Report exported successfully!");
-});
+    const stats = computeStats(parsed);
 
-// Load saved data on page load
-const saved = loadAnalysis();
-if (saved && saved.total > 0) {
-  currentAnalysis = saved;
-  render(saved);
+    // Combine into the single chatData object that dashboard.html expects.
+    // Date objects must be serialised as ISO strings — they don't survive JSON.
+    const chatData = {
+      messageList: parsed.messageList.map((msg) => ({
+        ...msg,
+        timestamp: msg.timestamp.toISOString(),
+      })),
+      userCounts: parsed.userCounts,
+      hourCounts: parsed.hourCounts,
+      dayCounts: parsed.dayCounts,
+      total: parsed.total,
+      firstDate: parsed.firstDate.toISOString(),
+      lastDate: parsed.lastDate.toISOString(),
+      chatDurationDays: parsed.chatDurationDays,
+      participants: parsed.participants,
+      responseTimes: stats.responseTimes,
+      fastest: stats.fastest,
+      slowest: stats.slowest,
+      longestStreak: stats.longestStreak,
+      currentStreak: stats.currentStreak,
+      longestSilenceDays: stats.longestSilenceDays,
+      activeDays: stats.activeDays,
+    };
+
+    try {
+      sessionStorage.setItem("chatData", JSON.stringify(chatData));
+    } catch {
+      // sessionStorage can throw if the payload is too large (very rare).
+      hideLoading();
+      showError(
+        "This chat is too large to process in the browser. Try a shorter export.",
+      );
+      return;
+    }
+
+    window.location.href = "../dashboard/dashboard.html";
+  };
+
+  reader.onerror = () => {
+    hideLoading();
+    showError("Could not read the file. Try again.");
+  };
+
+  reader.readAsText(file, "utf-8");
+}
+
+// ─── Validation ───────────────────────────────────────────────────────────────
+
+function validateFile(file) {
+  const name = file.name.toLowerCase();
+
+  if (name.endsWith(".zip")) {
+    return "ZIP files aren't supported — WhatsApp puts the chat inside the ZIP as a .txt file. Extract it first, then upload the .txt.";
+  }
+
+  if (!name.endsWith(".txt")) {
+    return "Only .txt files are accepted. Make sure you're uploading a WhatsApp chat export.";
+  }
+
+  // 50 MB cap. Larger than any realistic chat export.
+  const maxBytes = 50 * 1024 * 1024;
+  if (file.size > maxBytes) {
+    return "This file is over 50 MB, which is larger than expected for a WhatsApp export. Check that you selected the right file.";
+  }
+
+  return null;
+}
+
+// ─── UI State ─────────────────────────────────────────────────────────────────
+
+function showError(message) {
+  let errorEl = document.getElementById("uploadError");
+
+  if (!errorEl) {
+    errorEl = document.createElement("p");
+    errorEl.id = "uploadError";
+    errorEl.className = "upload-error";
+    dropZone.insertAdjacentElement("afterend", errorEl);
+  }
+
+  errorEl.textContent = message;
+  errorEl.hidden = false;
+}
+
+function clearError() {
+  const errorEl = document.getElementById("uploadError");
+  if (errorEl) errorEl.hidden = true;
+}
+
+function showLoading() {
+  dropZone.classList.add("loading");
+
+  const headline = dropZone.querySelector(".drop-zone-headline");
+  if (headline) {
+    headline.dataset.original = headline.textContent;
+    headline.textContent = "Analyzing\u2026";
+  }
+}
+
+function hideLoading() {
+  dropZone.classList.remove("loading");
+
+  const headline = dropZone.querySelector(".drop-zone-headline");
+  if (headline && headline.dataset.original) {
+    headline.textContent = headline.dataset.original;
+    delete headline.dataset.original;
+  }
 }

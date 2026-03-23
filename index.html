@@ -2,321 +2,161 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>WhatsApp Chat Analyzer - Professional Analytics</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-      .animate-fade-in {
-        animation: fadeIn 0.5s ease-in-out;
-      }
-      .stat-card {
-        transition: all 0.3s ease;
-      }
-      .stat-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-      }
-    </style>
+    <title>WhatsApp Chat Analyzer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../css/style.css" />
   </head>
-
-  <body
-    class="bg-gradient-to-br from-green-50 via-white to-green-50 min-h-screen"
-  >
-    <!-- Navigation -->
-    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div
-        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center"
-      >
-        <div class="flex items-center space-x-2">
-          <span class="text-2xl">📊</span>
-          <h1
-            class="text-2xl font-bold bg-gradient-to-r from-green-600 to-green-700 bg-clip-text text-transparent"
+  <body>
+    <!-- ── Navbar ─────────────────────────────────────────────────────── -->
+    <nav class="navbar">
+      <div class="navbar-inner">
+        <a href="#" class="navbar-logo">WA<span>.</span>Analyzer</a>
+        <div class="navbar-right">
+          <a
+            href="https://github.com/Radhium/WhatsApp-Chat-Analyzer"
+            target="_blank"
+            rel="noopener"
           >
-            WhatsApp Analytics
-          </h1>
-        </div>
-        <div class="flex items-center space-x-2">
-          <button
-            id="clearBtn"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition hidden"
-          >
-            Clear Data
-          </button>
-          <button
-            id="exportBtn"
-            class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition hidden"
-          >
-            Export Report
-          </button>
+            <svg
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-label="GitHub"
+              width="24"
+              height="24"
+            >
+              <path
+                d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.579.688.481C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"
+              />
+            </svg>
+          </a>
         </div>
       </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Hero Section -->
-      <section id="uploadSection" class="mb-12">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-          <div>
-            <h2 class="text-4xl font-bold text-gray-900 mb-4">
-              Upload & Analyze Your Chats
-            </h2>
-            <p class="text-lg text-gray-600 mb-4">
-              Get detailed insights about your WhatsApp conversations including
-              message patterns, active hours, and user statistics.
-            </p>
-            <ul class="space-y-3 text-gray-600">
-              <li class="flex items-center">
-                <span class="text-green-600 font-bold mr-2">✓</span> Message
-                count analysis
-              </li>
-              <li class="flex items-center">
-                <span class="text-green-600 font-bold mr-2">✓</span> User
-                activity tracking
-              </li>
-              <li class="flex items-center">
-                <span class="text-green-600 font-bold mr-2">✓</span> Hourly &
-                daily patterns
-              </li>
-              <li class="flex items-center">
-                <span class="text-green-600 font-bold mr-2">✓</span> Real-time
-                visualization
-              </li>
-            </ul>
-          </div>
-
-          <!-- Upload Area -->
-          <div
-            id="dropZone"
-            class="border-2 border-dashed border-green-300 rounded-2xl p-12 text-center bg-gradient-to-br from-green-50 to-emerald-50 cursor-pointer hover:border-green-500 hover:bg-green-50 transition-all duration-300 stat-card"
+    <!-- ── Hero ───────────────────────────────────────────────────────── -->
+    <main class="hero">
+      <div class="hero-inner">
+        <!-- Privacy badge -->
+        <div class="privacy-badge">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
           >
-            <div class="text-6xl mb-4">📁</div>
-            <p class="text-xl font-semibold text-gray-800 mb-2">
-              Drag & drop your chat file
-            </p>
-            <p class="text-gray-600 mb-4">or</p>
-            <label class="inline-block">
-              <span
-                class="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition cursor-pointer"
-              >
-                Browse Files
-              </span>
-              <input type="file" id="fileInput" accept=".txt" class="hidden" />
-            </label>
-            <p class="text-sm text-gray-500 mt-4">
-              Accepted format: .txt (WhatsApp exported chat)
-            </p>
-          </div>
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          100% local. Your data never leaves your device.
         </div>
-      </section>
 
-      <!-- Analytics Section -->
-      <section id="analytics" class="hidden">
-        <!-- Header with Actions -->
-        <div class="mb-8 flex justify-between items-center">
-          <h2 class="text-3xl font-bold text-gray-900">Your Analytics</h2>
+        <!-- Headline -->
+        <h1>See what your chats<br />actually say.</h1>
+
+        <!-- Subline -->
+        <p class="hero-subline">
+          Drop a WhatsApp export and get a full breakdown in seconds — response
+          times, streaks, who talks most, and when.
+        </p>
+
+        <!-- Drop Zone -->
+        <div
+          class="drop-zone"
+          id="dropZone"
+          role="button"
+          aria-label="Upload WhatsApp chat export"
+        >
+          <input
+            type="file"
+            id="fileInput"
+            accept=".txt"
+            aria-label="Choose file"
+          />
+
+          <svg
+            class="drop-zone-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+
+          <p class="drop-zone-headline">Drop your chat export here</p>
+          <p class="drop-zone-sub">
+            or <a href="#" id="filePickerLink">click to choose a file</a>
+          </p>
+          <p class="drop-zone-format">.txt accepted</p>
+        </div>
+
+        <!-- How to export -->
+        <div class="export-instructions">
           <button
-            id="uploadNewBtn"
-            class="px-6 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition"
+            class="export-toggle-btn"
+            id="exportToggle"
+            aria-expanded="false"
           >
-            Upload New File
+            <svg
+              class="export-chevron"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            How to export your WhatsApp chat
           </button>
-        </div>
 
-        <!-- Key Stats Grid -->
-        <div
-          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-fade-in"
-        >
-          <div class="stat-card bg-white rounded-xl p-6 border border-gray-200">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-gray-600 text-sm font-medium">Total Messages</p>
-                <p
-                  class="text-3xl font-bold text-gray-900 mt-2"
-                  id="totalMessages"
-                >
-                  0
+          <div class="export-steps" id="exportSteps" aria-hidden="true">
+            <p class="export-steps-title">Export from WhatsApp</p>
+            <ol class="step-list">
+              <li class="step-item">
+                <span class="step-number">1</span>
+                <p class="step-text">
+                  Open the chat you want to analyze. Tap the contact or group
+                  name at the top, then scroll down and tap
+                  <strong>Export Chat.</strong>
                 </p>
-              </div>
-              <span class="text-4xl">💬</span>
-            </div>
-          </div>
-
-          <div class="stat-card bg-white rounded-xl p-6 border border-gray-200">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-gray-600 text-sm font-medium">Total Users</p>
-                <p
-                  class="text-3xl font-bold text-gray-900 mt-2"
-                  id="totalUsers"
-                >
-                  0
+              </li>
+              <li class="step-item">
+                <span class="step-number">2</span>
+                <p class="step-text">
+                  Choose <strong>Without Media</strong> — the analyzer only
+                  needs the text file.
                 </p>
-              </div>
-              <span class="text-4xl">👥</span>
-            </div>
-          </div>
-
-          <div class="stat-card bg-white rounded-xl p-6 border border-gray-200">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-gray-600 text-sm font-medium">
-                  Avg Messages/User
+              </li>
+              <li class="step-item">
+                <span class="step-number">3</span>
+                <p class="step-text">
+                  Save the <strong>.txt</strong> file to your device, then drop
+                  it above.
                 </p>
-                <p
-                  class="text-3xl font-bold text-gray-900 mt-2"
-                  id="avgMessages"
-                >
-                  0
-                </p>
-              </div>
-              <span class="text-4xl">📈</span>
-            </div>
-          </div>
-
-          <div class="stat-card bg-white rounded-xl p-6 border border-gray-200">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-gray-600 text-sm font-medium">Active Hours</p>
-                <p
-                  class="text-3xl font-bold text-gray-900 mt-2"
-                  id="totalHours"
-                >
-                  0
-                </p>
-              </div>
-              <span class="text-4xl">⏰</span>
-            </div>
+              </li>
+            </ol>
           </div>
         </div>
-
-        <!-- Main Content Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 animate-fade-in">
-          <!-- Top User Card -->
-          <div
-            class="lg:col-span-1 bg-gradient-to-br from-green-600 to-green-700 rounded-xl p-6 text-white"
-          >
-            <p class="text-green-100 text-sm font-medium">Most Active User</p>
-            <p class="text-3xl font-bold mt-3" id="topUser">-</p>
-            <p class="text-green-100 text-sm mt-4" id="topUserDesc">
-              Upload a chat to see stats
-            </p>
-          </div>
-
-          <!-- Most Active Hour Card -->
-          <div
-            class="lg:col-span-1 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-6 text-white"
-          >
-            <p class="text-blue-100 text-sm font-medium">Peak Activity Hour</p>
-            <p class="text-3xl font-bold mt-3" id="activeHour">-</p>
-            <p class="text-blue-100 text-sm mt-4" id="activeHourDesc">
-              Most messages sent at this hour
-            </p>
-          </div>
-
-          <!-- Chat Duration Card -->
-          <div
-            class="lg:col-span-1 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl p-6 text-white"
-          >
-            <p class="text-purple-100 text-sm font-medium">Chat Duration</p>
-            <p class="text-3xl font-bold mt-3" id="chatDuration">-</p>
-            <p class="text-purple-100 text-sm mt-4" id="chatDurationDesc">
-              Days between first and last message
-            </p>
-          </div>
-        </div>
-
-        <!-- Charts Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 animate-fade-in">
-          <!-- User Chart -->
-          <div class="bg-white rounded-xl p-6 border border-gray-200">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">
-              Messages by User
-            </h3>
-            <div style="max-height: 400px">
-              <canvas id="userChartJs" class="w-full"></canvas>
-            </div>
-          </div>
-
-          <!-- Hourly Chart -->
-          <div class="bg-white rounded-xl p-6 border border-gray-200">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">
-              Messages by Hour
-            </h3>
-            <div style="max-height: 400px">
-              <canvas id="hourChartJs" class="w-full"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Daily Messages Chart -->
-        <div
-          class="bg-white rounded-xl p-6 border border-gray-200 mb-8 animate-fade-in"
-        >
-          <h3 class="text-lg font-bold text-gray-900 mb-4">
-            Daily Message Trend
-          </h3>
-          <div style="max-height: 400px">
-            <canvas id="dailyChartJs" class="w-full"></canvas>
-          </div>
-        </div>
-
-        <!-- Statistics Table -->
-        <div
-          class="bg-white rounded-xl p-6 border border-gray-200 animate-fade-in"
-        >
-          <h3 class="text-lg font-bold text-gray-900 mb-4">User Statistics</h3>
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-50">
-                <tr>
-                  <th
-                    class="px-6 py-3 text-left text-sm font-semibold text-gray-900"
-                  >
-                    User
-                  </th>
-                  <th
-                    class="px-6 py-3 text-left text-sm font-semibold text-gray-900"
-                  >
-                    Messages
-                  </th>
-                  <th
-                    class="px-6 py-3 text-left text-sm font-semibold text-gray-900"
-                  >
-                    Percentage
-                  </th>
-                  <th
-                    class="px-6 py-3 text-left text-sm font-semibold text-gray-900"
-                  >
-                    Progress
-                  </th>
-                </tr>
-              </thead>
-              <tbody id="userStatsTable" class="divide-y divide-gray-200">
-                <!-- Populated by JavaScript -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+      </div>
     </main>
 
-    <!-- Toast Notification -->
-    <div
-      id="toast"
-      class="fixed bottom-4 right-4 px-6 py-3 bg-green-600 text-white rounded-lg shadow-lg hidden transform transition-transform"
-    ></div>
-
-    <script type="module" src="js/app.js"></script>
+    <script type="module" src="../Js/app.js"></script>
   </body>
 </html>
