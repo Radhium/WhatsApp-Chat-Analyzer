@@ -175,9 +175,7 @@ function populateResponseTimeSection(data) {
     ([, rt]) => rt.sampleCount < MIN_SAMPLES,
   );
 
-  const tbody = document.querySelector(
-    '.card[style*="overflow"] .user-table tbody',
-  );
+  const tbody = document.querySelector("#responseTimeCard .user-table tbody");
   if (!tbody) return;
   tbody.innerHTML = "";
 
